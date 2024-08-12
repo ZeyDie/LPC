@@ -22,85 +22,99 @@ import java.util.stream.Collectors;
 
 public final class LPC extends JavaPlugin implements Listener {
 
-	private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+    private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
-	private LuckPerms luckPerms;
-	
-	@Override
-	public void onEnable() {
-		// Load an instance of 'LuckPerms' using the services manager.
-		this.luckPerms = getServer().getServicesManager().load(LuckPerms.class);
+    private LuckPerms luckPerms;
 
-		saveDefaultConfig();
-		getServer().getPluginManager().registerEvents(this, this);
-	}
+    @Override
+    public void onEnable() {
+        // Load an instance of 'LuckPerms' using the services manager.
+        this.luckPerms = getServer().getServicesManager().load(LuckPerms.class);
 
-	@Override
-	public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
-		if (args.length == 1 && "reload".equals(args[0])) {
-			reloadConfig();
+        saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(this, this);
+    }
 
-			sender.sendMessage(colorize("&aLPC has been reloaded."));
-			return true;
-		}
+    @Override
+    public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
+        if (args.length == 1 && "reload".equals(args[0])) {
+            reloadConfig();
 
-		return false;
-	}
+            sender.sendMessage(colorize("&aLPC has been reloaded."));
+            return true;
+        }
 
-	@Override
-	public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-		if (args.length == 1)
-			return Collections.singletonList("reload");
+        return false;
+    }
 
-		return new ArrayList<>();
-	}
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1)
+            return Collections.singletonList("reload");
 
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onChat(final AsyncPlayerChatEvent event) {
-		final String message = event.getMessage();
-		final Player player = event.getPlayer();
+        return new ArrayList<>();
+    }
 
-		// Get a LuckPerms cached metadata for the player.
-		final CachedMetaData metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
-		final String group = metaData.getPrimaryGroup();
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onChat(final AsyncPlayerChatEvent event) {
+        final String message = event.getMessage();
+        final Player player = event.getPlayer();
 
-		String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
-				.replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
-				.replace("{suffix}", metaData.getSuffix() != null ? metaData.getSuffix() : "")
-				.replace("{prefixes}", metaData.getPrefixes().keySet().stream().map(key -> metaData.getPrefixes().get(key)).collect(Collectors.joining()))
-				.replace("{suffixes}", metaData.getSuffixes().keySet().stream().map(key -> metaData.getSuffixes().get(key)).collect(Collectors.joining()))
-				.replace("{world}", player.getWorld().getName())
-				.replace("{name}", player.getName())
-				.replace("{displayname}", player.getDisplayName())
-				.replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
-				.replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
+        // Get a LuckPerms cached metadata for the player.
+        final CachedMetaData metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
+        final String group = metaData.getPrimaryGroup();
 
-		format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
+        String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
+                .replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
+                .replace("{suffix}", metaData.getSuffix() != null ? metaData.getSuffix() : "")
+                .replace("{prefixes}", metaData.getPrefixes().keySet().stream().map(key -> metaData.getPrefixes().get(key)).collect(Collectors.joining()))
+                .replace("{suffixes}", metaData.getSuffixes().keySet().stream().map(key -> metaData.getSuffixes().get(key)).collect(Collectors.joining()))
+                .replace("{world}", player.getWorld().getName())
+                .replace("{name}", player.getName())
+                .replace("{displayname}", player.getDisplayName())
+                .replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
+                .replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
+
+        //TODO ZeyCodeStart
+        format = getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format;
+
+        if (player.hasPermission("lpc.rgbcodes"))
+            format = translateHexColorCodes(format);
+        if (player.hasPermission("lpc.colorcodes"))
+            format = colorize(format);
+
+        format = format.replace("{message}", message);
+
+        event.setFormat(format);
+        event.setMessage("");
+        //TODO ZeyCodeEnd
+        //TODO ZeyCodeClear
+		/*format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
 
 		event.setFormat(format.replace("{message}", player.hasPermission("lpc.colorcodes") && player.hasPermission("lpc.rgbcodes")
 				? colorize(translateHexColorCodes(message)) : player.hasPermission("lpc.colorcodes") ? colorize(message) : player.hasPermission("lpc.rgbcodes")
-				? translateHexColorCodes(message) : message).replace("%", "%%"));
-	}
+				? translateHexColorCodes(message) : message).replace("%", "%%"));*/
+    }
 
-	private String colorize(final String message) {
-		return ChatColor.translateAlternateColorCodes('&', message);
-	}
+    private String colorize(final String message) {
+        return ChatColor.translateAlternateColorCodes('&', message);
+    }
 
-	private String translateHexColorCodes(final String message) {
-		final char colorChar = ChatColor.COLOR_CHAR;
+    private String translateHexColorCodes(final String message) {
+        final char colorChar = ChatColor.COLOR_CHAR;
 
-		final Matcher matcher = HEX_PATTERN.matcher(message);
-		final StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+        final Matcher matcher = HEX_PATTERN.matcher(message);
+        final StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
 
-		while (matcher.find()) {
-			final String group = matcher.group(1);
+        while (matcher.find()) {
+            final String group = matcher.group(1);
 
-			matcher.appendReplacement(buffer, colorChar + "x"
-					+ colorChar + group.charAt(0) + colorChar + group.charAt(1)
-					+ colorChar + group.charAt(2) + colorChar + group.charAt(3)
-					+ colorChar + group.charAt(4) + colorChar + group.charAt(5));
-		}
+            matcher.appendReplacement(buffer, colorChar + "x"
+                    + colorChar + group.charAt(0) + colorChar + group.charAt(1)
+                    + colorChar + group.charAt(2) + colorChar + group.charAt(3)
+                    + colorChar + group.charAt(4) + colorChar + group.charAt(5));
+        }
 
-		return matcher.appendTail(buffer).toString();
-	}
+        return matcher.appendTail(buffer).toString();
+    }
 }
